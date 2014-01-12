@@ -22,6 +22,9 @@
     <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Intel_OpenCL_Build_Rules Include="vva.cl">
@@ -30,5 +33,10 @@
     <Intel_OpenCL_Build_Rules Include="mv.cl">
       <Filter>OpenCL Files</Filter>
     </Intel_OpenCL_Build_Rules>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="test.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,23 +1,27 @@
 #define __CL_ENABLE_EXCEPTIONS
-#include < CL/cl.hpp >
-#include < iostream >
-#include < fstream >
-#include < string >
+#include <CL/cl.hpp>
+#include <iostream>
+#include <fstream>
+#include <string>
 
-int main()
+#include "test.hpp"
+
+
+int main(int argc, char* argv[])
 {
-	const int N_ELEMENTS = 1024;
-	float* a = new float[N_ELEMENTS];
-	float* b = new float[N_ELEMENTS];
-	float* c = new float[N_ELEMENTS];
+	const unsigned int N_ELEMENTS = 2048;
+	float* M = new float[N_ELEMENTS * N_ELEMENTS];
+	float* V = new float[N_ELEMENTS];
+	float* W = new float[N_ELEMENTS];
 
 	register int i;
-	for(i = 0; i < N_ELEMENTS; i++)
-	{
-		a[i] = i;
-		b[i] = i;
-	}
+	for(i = 0; i < N_ELEMENTS * N_ELEMENTS; i++)
+		M[i] = i;
 
+	for(i = 0; i < N_ELEMENTS ; i++)		
+		V[i] = i;
+
+	
 	try {
 		//Platform layer
 		std::vector < cl::Platform > platforms;
@@ -30,7 +34,7 @@ int main()
 		std::cout << "Using platform: " << default_platform.getInfo < CL_PLATFORM_NAME > () << std::endl;
 
 		std::vector < cl::Device > devices;
-		default_platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
+		default_platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
 		if(devices.size() == 0){
 			std::cout << "No devices found\n";
 			exit(1);
@@ -47,24 +51,26 @@ int main()
 		cl::CommandQueue queue = cl::CommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE);
 
 		//Runtime layer
-		cl::Buffer buffera= cl::Buffer(context, CL_MEM_READ_ONLY, N_ELEMENTS * sizeof(float));
-		cl::Buffer bufferb= cl::Buffer(context, CL_MEM_READ_ONLY, N_ELEMENTS * sizeof(float));
-		cl::Buffer bufferc= cl::Buffer(context, CL_MEM_WRITE_ONLY, N_ELEMENTS * sizeof(float));
+		cl::Buffer bufferM= cl::Buffer(context, CL_MEM_READ_ONLY, N_ELEMENTS * N_ELEMENTS * sizeof(float));
+		cl::Buffer bufferV= cl::Buffer(context, CL_MEM_READ_ONLY, N_ELEMENTS * sizeof(float));
+		cl::Buffer bufferW= cl::Buffer(context, CL_MEM_WRITE_ONLY, N_ELEMENTS * sizeof(float));
 
-		queue.enqueueWriteBuffer(buffera, CL_TRUE, 0, N_ELEMENTS * sizeof(float), a);
-		queue.enqueueWriteBuffer(bufferb, CL_TRUE, 0, N_ELEMENTS * sizeof(float), b);
+		queue.enqueueWriteBuffer(bufferM, CL_TRUE, 0, N_ELEMENTS * sizeof(float), M);
+		queue.enqueueWriteBuffer(bufferV, CL_TRUE, 0, N_ELEMENTS * sizeof(float), V);
 
 		//Compiler
-		std::ifstream src("vva.cl");
+		std::ifstream src("mv.cl");
 		std::string code(std::istreambuf_iterator < char > (src), (std::istreambuf_iterator < char > ()));
 		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length() + 1));
 		cl::Program program = cl::Program(context, source);
 		program.build(devices);
-		cl::Kernel vva(program, "vva");
+		cl::Kernel mv(program, "mv");
 
-		vva.setArg(0, buffera);
-		vva.setArg(1, bufferb);
-		vva.setArg(2, bufferc);
+		mv.setArg(0, bufferM);
+		mv.setArg(1, N_ELEMENTS);
+		mv.setArg(2, N_ELEMENTS);
+		mv.setArg(3, bufferV);
+		mv.setArg(4, bufferW);
 
 		cl::Event event;
 		cl_ulong queued;
@@ -72,11 +78,8 @@ int main()
 		cl_ulong start;
 		cl_ulong end;
 
-		cl::NDRange global(N_ELEMENTS);
-		cl::NDRange local(256);
-		queue.enqueueTask(vva, NULL, &event);
-		queue.enqueueNDRangeKernel(vva, cl::NullRange, global, local);
-		queue.enqueueReadBuffer(bufferc, CL_TRUE, 0, N_ELEMENTS * sizeof(float), c);
+		queue.enqueueTask(mv, NULL, &event);
+		queue.enqueueReadBuffer(bufferW, CL_TRUE, 0, N_ELEMENTS * sizeof(float), W);
 		queue.flush();
 		event.wait();
 
@@ -85,14 +88,8 @@ int main()
 		event.getProfilingInfo < cl_ulong > (CL_PROFILING_COMMAND_START, &start);
 		event.getProfilingInfo < cl_ulong > (CL_PROFILING_COMMAND_END, &end);
 
-		bool result = true;
-		for(i = 0; i < N_ELEMENTS; i++) 
-		{
-			if(c[i] != a[i] + b[i]){
-				result = false;
-				break;
-			}
-		}
+		bool result = assert(W, omv(M, V, N_ELEMENTS), N_ELEMENTS);
+
 		if(result)
 			std::cout << "Success!" << std::endl;
 		else
@@ -111,3 +108,4 @@ int main()
 	system("PAUSE");
 	exit(0);
 }
+
