@@ -39,15 +39,17 @@ int main(int argc, char* argv[])
 			std::cout << "No devices found\n";
 			exit(1);
 		}
-
 		cl::Device device = devices[0];
+
 		std::cout << "Using device: " << device.getInfo < CL_DEVICE_NAME > ()  << std::endl;
+		std::cout << "Compute units: " << device.getInfo < CL_DEVICE_MAX_COMPUTE_UNITS > () << std::endl;
+		std::cout << "Work item dimensions: " << device.getInfo < CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS > () << std::endl;
+		std::cout << "Work group size: " << device.getInfo < CL_DEVICE_MAX_WORK_GROUP_SIZE > ()  << std::endl;
 		std::cout << "Working intems: " << device.getInfo < CL_DEVICE_MAX_WORK_ITEM_SIZES > ()[0]  << std::endl;
 		std::cout << "Profile: " << device.getInfo < CL_DEVICE_PROFILE > ()  << std::endl;
 		std::cout << "Version: " << device.getInfo < CL_DEVICE_OPENCL_C_VERSION > ()  << std::endl;
 
 		cl::Context context(devices);
-
 		cl::CommandQueue queue = cl::CommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE);
 
 		//Runtime layer
