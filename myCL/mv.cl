@@ -6,7 +6,6 @@ __kernel void mv(
   __global float* W
 			       ) 
 { 
-  // Each work-item computes multiple elements of W 
   for (unsigned int y = get_global_id(0); y < height; y += get_global_size(0)) { 
     const __global float* row = M + y * width; 
     float dotProduct = 0.0; 
