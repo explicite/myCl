@@ -27,10 +27,16 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Intel_OpenCL_Build_Rules Include="vva.cl">
+    <Intel_OpenCL_Build_Rules Include="matvecmull.cl">
       <Filter>OpenCL Files</Filter>
     </Intel_OpenCL_Build_Rules>
-    <Intel_OpenCL_Build_Rules Include="mv.cl">
+    <Intel_OpenCL_Build_Rules Include="matinv.cl">
+      <Filter>OpenCL Files</Filter>
+    </Intel_OpenCL_Build_Rules>
+    <Intel_OpenCL_Build_Rules Include="vecaddinv.cl">
+      <Filter>OpenCL Files</Filter>
+    </Intel_OpenCL_Build_Rules>
+    <Intel_OpenCL_Build_Rules Include="vecadd.cl">
       <Filter>OpenCL Files</Filter>
     </Intel_OpenCL_Build_Rules>
   </ItemGroup>

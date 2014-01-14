@@ -165,8 +165,10 @@
     <ClCompile Include="test.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Intel_OpenCL_Build_Rules Include="mv.cl" />
-    <Intel_OpenCL_Build_Rules Include="vva.cl" />
+    <Intel_OpenCL_Build_Rules Include="matinv.cl" />
+    <Intel_OpenCL_Build_Rules Include="matvecmull.cl" />
+    <Intel_OpenCL_Build_Rules Include="vecadd.cl" />
+    <Intel_OpenCL_Build_Rules Include="vecaddinv.cl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="test.hpp" />

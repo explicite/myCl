@@ -8,24 +8,6 @@
 
 int main(int argc, char* argv[])
 {
-	const unsigned int SIZE = 1024*6;
-	const unsigned int N_ELEMENTS = SIZE * SIZE;
-	size_t V_size = sizeof(float) * N_ELEMENTS;
-
-	float* V1 = (float*)malloc(V_size);
-	float* V2 = (float*)malloc(V_size);
-	float* P = (float*)malloc(V_size);
-	float* vP = (float*)malloc(V_size);
-
-	register int i;
-	#pragma omp parallel for schedule(static) private(i)
-	for(i = 0; i < N_ELEMENTS; i++){
-		V1[i] = i;
-		V2[i] = i;
-		vP[i] = i + i;
-		P[i] = 0;
-	}	
-
 	try {
 		//Platform layer
 		std::vector <cl::Platform> platforms;
@@ -53,11 +35,31 @@ int main(int argc, char* argv[])
 		size_t MAX_WORK_GROUP_SIZE = device.getInfo < CL_DEVICE_MAX_WORK_GROUP_SIZE > ();
 		std::cout << "Work group size: " << MAX_WORK_GROUP_SIZE << std::endl;
 		std::cout << "Working intems: " << device.getInfo < CL_DEVICE_MAX_WORK_ITEM_SIZES > ()[0]  << std::endl;
+		std::cout << "Kernel group size: " << CL_KERNEL_WORK_GROUP_SIZE << std::endl;
 		std::cout << "Profile: " << device.getInfo < CL_DEVICE_PROFILE > ()  << std::endl;
 		std::cout << "Version: " << device.getInfo < CL_DEVICE_OPENCL_C_VERSION > ()  << std::endl;
 
 		cl::Context context(devices);
 		cl::CommandQueue queue = cl::CommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE);
+
+		//Data prepare
+		const unsigned int SIZE = 1024*6;
+		const unsigned int N_ELEMENTS = SIZE * SIZE;
+		size_t V_size = sizeof(float) * N_ELEMENTS;
+
+		float* V1 = (float*)malloc(V_size);
+		float* V2 = (float*)malloc(V_size);
+		float* P = (float*)malloc(V_size);
+		float* vP = (float*)malloc(V_size);
+
+		register int i;
+		#pragma omp parallel for schedule(static) private(i)
+		for(i = 0; i < N_ELEMENTS; i++){
+			V1[i] = i;
+			V2[i] = i;
+			vP[i] = i + i;
+			P[i] = 0;
+		}	
 
 		//Runtime layer
 		cl::Buffer bufferV1= cl::Buffer(context, CL_MEM_READ_ONLY, V_size);
@@ -68,17 +70,16 @@ int main(int argc, char* argv[])
 		queue.enqueueWriteBuffer(bufferV2, CL_TRUE, 0, V_size, V2);
 
 		//Compiler
-		std::ifstream src("vva.cl");
+		std::ifstream src("vecaddinv.cl");
 		std::string code(std::istreambuf_iterator<char>(src), (std::istreambuf_iterator<char>()));
 		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length() + 1));
 		cl::Program program = cl::Program(context, source);
 		program.build(devices);
-		cl::Kernel kernel(program, "vva");
+		cl::Kernel kernel(program, "vecaddinv");
 
 		kernel.setArg(0, bufferV1);
 		kernel.setArg(1, bufferV2);
 		kernel.setArg(2, bufferP);
-		kernel.setArg(3, SIZE);
 
 		cl::Event event;
 		cl_ulong queued;
@@ -87,7 +88,7 @@ int main(int argc, char* argv[])
 		cl_ulong end;
 
 		cl::NDRange global(SIZE, SIZE);
-		cl::NDRange local(24, 24);
+		cl::NDRange local(16, 16);
 		queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local, NULL, &event);
 		queue.enqueueReadBuffer(bufferP, CL_TRUE, 0, V_size, P);
 		queue.flush();
