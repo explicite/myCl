@@ -10,3 +10,4 @@ __kernel void matinv(
 	invM[write_idx] = M[read_idx];
 
 }
+

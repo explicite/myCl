@@ -17,6 +17,7 @@ Global
 		{7E7361F6-76BE-4927-8A5E-8E040079642A}.Debug|x64.Build.0 = Debug|x64
 		{7E7361F6-76BE-4927-8A5E-8E040079642A}.Release|Win32.ActiveCfg = Release|Win32
 		{7E7361F6-76BE-4927-8A5E-8E040079642A}.Release|Win32.Build.0 = Release|Win32
+		{7E7361F6-76BE-4927-8A5E-8E040079642A}.Release|Win32.Deploy.0 = Release|Win32
 		{7E7361F6-76BE-4927-8A5E-8E040079642A}.Release|x64.ActiveCfg = Release|x64
 		{7E7361F6-76BE-4927-8A5E-8E040079642A}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection

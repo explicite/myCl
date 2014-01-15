@@ -166,7 +166,7 @@
   </ItemGroup>
   <ItemGroup>
     <Intel_OpenCL_Build_Rules Include="matinv.cl" />
-    <Intel_OpenCL_Build_Rules Include="matvecmull.cl" />
+    <Intel_OpenCL_Build_Rules Include="matvecmul.cl" />
     <Intel_OpenCL_Build_Rules Include="vecadd.cl" />
     <Intel_OpenCL_Build_Rules Include="vecaddinv.cl" />
   </ItemGroup>
