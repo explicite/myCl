@@ -28,13 +28,27 @@ int main(int argc, char* argv[])
 		cl::Device device = devices[0];
 
 		std::cout << "Using device: " << device.getInfo < CL_DEVICE_NAME > ()  << std::endl;
+
 		std::cout << "Device mem: " << device.getInfo < CL_DEVICE_MAX_MEM_ALLOC_SIZE > () << std::endl;
+
 		std::cout << "Device freq: " << device.getInfo <CL_DEVICE_MAX_CLOCK_FREQUENCY> () << "MHz\n";
-		std::cout << "Compute units: " << device.getInfo < CL_DEVICE_MAX_COMPUTE_UNITS > () << std::endl;
+
+		size_t COMPUTE_UNITS = device.getInfo < CL_DEVICE_MAX_COMPUTE_UNITS > ();
+		std::cout << "Compute units: " << COMPUTE_UNITS << std::endl;
+
+		size_t MAX_WORK_ITEMS_DIMENSION = device.getInfo < CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS > ();
 		std::cout << "Work item dimensions: " << device.getInfo < CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS > () << std::endl;
+
 		size_t MAX_WORK_GROUP_SIZE = device.getInfo < CL_DEVICE_MAX_WORK_GROUP_SIZE > ();
 		std::cout << "Work group size: " << MAX_WORK_GROUP_SIZE << std::endl;
-		std::cout << "Working intems: " << device.getInfo < CL_DEVICE_MAX_WORK_ITEM_SIZES > ()[0]  << std::endl;
+
+		std::vector <size_t> MAX_WORK_ITEMS = device.getInfo < CL_DEVICE_MAX_WORK_ITEM_SIZES > ();
+		std::cout << "Working items: ";
+		for(int i = 0; i < MAX_WORK_ITEMS_DIMENSION; i++)
+			std::cout << MAX_WORK_ITEMS[i] << " ";
+
+		std::cout << std::endl;
+
 		std::cout << "Kernel group size: " << CL_KERNEL_WORK_GROUP_SIZE << std::endl;
 		std::cout << "Profile: " << device.getInfo < CL_DEVICE_PROFILE > ()  << std::endl;
 		std::cout << "Version: " << device.getInfo < CL_DEVICE_OPENCL_C_VERSION > ()  << std::endl;
@@ -43,11 +57,11 @@ int main(int argc, char* argv[])
 		cl::CommandQueue queue = cl::CommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE);
 		
 		//Size for vector and matrix
-		const unsigned int SIZE = 1024*8;
+		const unsigned int SIZE = 1024*7;
 		size_t V_size = sizeof(float) * SIZE;
 		size_t M_size = sizeof(float) * SIZE * SIZE;
 
-		//Prepare kernels
+		//Prepare standard kernels
 		//Matrix - Vector Multiplication
 		std::ifstream matvecmul_src("matvecmul.cl");
 		std::string matvecmul_code(std::istreambuf_iterator<char>(matvecmul_src), (std::istreambuf_iterator<char>()));
@@ -71,6 +85,25 @@ int main(int argc, char* argv[])
 		cl::Program matinv_program = cl::Program(context, matinv_source);
 		matinv_program.build(devices);
 		cl::Kernel matinv(matinv_program, "matinv");
+		
+		//Prepare optimized kernels
+		//Matrix - Vector Multiplication
+
+		//Add Vectors
+		std::ifstream opt_vecadd_src("opt_vecadd.cl");
+		std::string opt_vecadd_code(std::istreambuf_iterator<char>(opt_vecadd_src), (std::istreambuf_iterator<char>()));
+		cl::Program::Sources opt_vecadd_source(1, std::make_pair(opt_vecadd_code.c_str(), opt_vecadd_code.length() + 1));
+		cl::Program opt_vecadd_program = cl::Program(context, opt_vecadd_source);
+		opt_vecadd_program.build(devices);
+		cl::Kernel opt_vecadd(opt_vecadd_program, "opt_vecadd");
+
+		//Invers Matrix
+		std::ifstream opt_matinv_src("opt_matinv.cl");
+		std::string opt_matinv_code(std::istreambuf_iterator<char>(opt_matinv_src), (std::istreambuf_iterator<char>()));
+		cl::Program::Sources opt_matinv_source(1, std::make_pair(opt_matinv_code.c_str(), opt_matinv_code.length() + 1));
+		cl::Program opt_matinv_program = cl::Program(context, opt_matinv_source);
+		opt_matinv_program.build(devices);
+		cl::Kernel opt_matinv(opt_matinv_program, "opt_matinv");
 
 		//Profiler
 		cl::Event profiler;
@@ -86,7 +119,7 @@ int main(int argc, char* argv[])
 		register int i;
 		#pragma omp parallel for schedule(static) private(i)
 		for(i = 0; i < SIZE; i++){
-			V[i] = i;
+			V[i] = i*2;
 			V1[i] = 0;
 			V2[i] = 0;
 			P[i] = 0;
@@ -101,7 +134,7 @@ int main(int argc, char* argv[])
 		//Matrix vector multiplication
 		cl::Buffer readM = cl::Buffer(context, CL_MEM_READ_ONLY, M_size);
 		cl::Buffer readV = cl::Buffer(context, CL_MEM_READ_ONLY, V_size);
-		cl::Buffer writeV = cl::Buffer(context, CL_MEM_WRITE_ONLY, V_size);
+		cl::Buffer writeV1 = cl::Buffer(context, CL_MEM_WRITE_ONLY, V_size);
 		
 		queue.enqueueWriteBuffer(readM, CL_TRUE, 0, M_size, M);
 		queue.enqueueWriteBuffer(readV, CL_TRUE, 0, V_size, V);
@@ -109,10 +142,10 @@ int main(int argc, char* argv[])
 
 		matvecmul.setArg(0, readM);
 		matvecmul.setArg(1, readV);
-		matvecmul.setArg(2, writeV);
+		matvecmul.setArg(2, writeV1);
 	
 		queue.enqueueNDRangeKernel(matvecmul, cl::NullRange, cl::NDRange(SIZE, SIZE), cl::NDRange(16, 16), NULL, &profiler);
-		queue.enqueueReadBuffer(writeV, CL_TRUE, 0, V_size, V1);
+		queue.enqueueReadBuffer(writeV1, CL_TRUE, 0, V_size, V1);
 		queue.flush();
 		profiler.wait();
 
@@ -131,9 +164,9 @@ int main(int argc, char* argv[])
 		bool result = assert(omv(M, V, SIZE), V1, SIZE); 
 
 		if(result)
-			std::cout << "Success!" << std::endl;
+			std::cout << "\nSuccess!" << std::endl;
 		else
-			std::cout << "Failed!" << std::endl;
+			std::cout << "\nFailed!" << std::endl;
 		
 		//Profiling info
 		std::cout << "Size: " << SIZE << std::endl;
@@ -147,10 +180,10 @@ int main(int argc, char* argv[])
 
 		queue.enqueueWriteBuffer(readM, CL_TRUE, 0, M_size, M);
 
-		matinv.setArg(0, readM);
-		matinv.setArg(1, writeM);
+		opt_matinv.setArg(0, readM);
+		opt_matinv.setArg(1, writeM);
 
-		queue.enqueueNDRangeKernel(matinv, cl::NullRange, cl::NDRange(SIZE, SIZE), cl::NDRange(16, 16), NULL, &profiler);
+		queue.enqueueNDRangeKernel(opt_matinv, cl::NullRange, cl::NDRange(SIZE, SIZE), cl::NDRange(16, 16), NULL, &profiler);
 		queue.enqueueReadBuffer(writeM, CL_TRUE, 0, M_size, invM);
 		queue.flush();
 		profiler.wait();
@@ -168,9 +201,9 @@ int main(int argc, char* argv[])
 		result = assert_inv(M, invM, SIZE); 
 
 		if(result)
-			std::cout << "Success!" << std::endl;
+			std::cout << "\nSuccess!" << std::endl;
 		else
-			std::cout << "Failed!" << std::endl;
+			std::cout << "\nFailed!" << std::endl;
 		
 		//Profiling info
 		std::cout << "Size: " << SIZE << std::endl;
@@ -180,15 +213,17 @@ int main(int argc, char* argv[])
 		std::cout << "Computation: " << matinv_end - matinv_start << "ns\n";
 
 		//Matrix vector multiplication
+		cl::Buffer writeV2 = cl::Buffer(context, CL_MEM_WRITE_ONLY, V_size);
+
 		queue.enqueueWriteBuffer(readM, CL_TRUE, 0, M_size, invM);
 		queue.enqueueWriteBuffer(readV, CL_TRUE, 0, V_size, V);
 
 		matvecmul.setArg(0, readM);
 		matvecmul.setArg(1, readV);
-		matvecmul.setArg(2, writeV);
+		matvecmul.setArg(2, writeV2);
 
 		queue.enqueueNDRangeKernel(matvecmul, cl::NullRange, cl::NDRange(SIZE, SIZE), cl::NDRange(16, 16), NULL, &profiler);
-		queue.enqueueReadBuffer(writeV, CL_TRUE, 0, V_size, V2);
+		queue.enqueueReadBuffer(writeV2, CL_TRUE, 0, V_size, V2);
 		queue.flush();
 		profiler.wait();
 
@@ -201,9 +236,9 @@ int main(int argc, char* argv[])
 		result = assert(omv(invM, V, SIZE), V2, SIZE); 
 
 		if(result)
-			std::cout << "Success!" << std::endl;
+			std::cout << "\nSuccess!" << std::endl;
 		else
-			std::cout << "Failed!" << std::endl;
+			std::cout << "\nFailed!" << std::endl;
 		
 		//Profiling info
 		std::cout << "Size: " << SIZE << std::endl;
@@ -215,16 +250,18 @@ int main(int argc, char* argv[])
 
 		//Sum vectors
 		cl::Buffer readV1 = cl::Buffer(context, CL_MEM_READ_ONLY, V_size);
+		cl::Buffer writeP = cl::Buffer(context, CL_MEM_READ_ONLY, V_size);
 
 		queue.enqueueWriteBuffer(readV, CL_TRUE, 0, V_size, V1);
 		queue.enqueueWriteBuffer(readV1, CL_TRUE, 0, V_size, V2);
 
-		vecadd.setArg(0, readV);
-		vecadd.setArg(1, readV1);
-		vecadd.setArg(2, writeV);
+		opt_vecadd.setArg(0, readV);
+		opt_vecadd.setArg(1, readV1);
+		opt_vecadd.setArg(2, writeP);
+		opt_vecadd.setArg(3, SIZE);
 
-		queue.enqueueNDRangeKernel(vecadd, cl::NullRange, cl::NDRange(SIZE), cl::NDRange(64), NULL, &profiler);
-		queue.enqueueReadBuffer(writeV, CL_TRUE, 0, V_size, P);
+		queue.enqueueNDRangeKernel(opt_vecadd, cl::NullRange, cl::NDRange(SIZE/4), cl::NDRange(256), NULL, &profiler);
+		queue.enqueueReadBuffer(writeP, CL_TRUE, 0, V_size, P);
 		queue.flush();
 		profiler.wait();
 
@@ -239,13 +276,12 @@ int main(int argc, char* argv[])
 		profiler.getProfilingInfo <cl_ulong> (CL_PROFILING_COMMAND_END, &vecadd_end);
 
 		//Veryfication
-		V = add(V1, V2, SIZE);
-		result = assert(P, V, SIZE); 
+		result = assert(P, add(V1, V2, SIZE), SIZE); 
 
 		if(result)
-			std::cout << "Success!" << std::endl;
+			std::cout << "\nSuccess!" << std::endl;
 		else
-			std::cout << "Failed!" << std::endl;
+			std::cout << "\nFailed!" << std::endl;
 		
 		//Profiling info
 		std::cout << "Size: " << SIZE << std::endl;
@@ -260,7 +296,7 @@ int main(int argc, char* argv[])
 		free(V2);
 		free(P);
 		free(M);
-		free(invM);
+		free(invM); 
 
 	} catch(cl::Error error) {
 		std::cout << error.what() << "(" << error.err() << ")" << std::endl;
