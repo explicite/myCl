@@ -165,16 +165,16 @@
     <ClCompile Include="test.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Intel_OpenCL_Build_Rules Include="mattrans.cl" />
-    <Intel_OpenCL_Build_Rules Include="matvecmul.cl" />
-    <Intel_OpenCL_Build_Rules Include="opt_matvecmul.cl" />
-    <Intel_OpenCL_Build_Rules Include="opt_mattrans.cl" />
-    <Intel_OpenCL_Build_Rules Include="opt_vecadd.cl" />
-    <Intel_OpenCL_Build_Rules Include="vecadd.cl" />
-    <Intel_OpenCL_Build_Rules Include="vecaddinv.cl" />
+    <ClInclude Include="test.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="test.hpp" />
+    <Intel_OpenCL_Build_Rules Include="kernel\mattrans.cl" />
+    <Intel_OpenCL_Build_Rules Include="kernel\matvecmul.cl" />
+    <Intel_OpenCL_Build_Rules Include="kernel\opt_mattrans.cl" />
+    <Intel_OpenCL_Build_Rules Include="kernel\opt_matvecmul.cl" />
+    <Intel_OpenCL_Build_Rules Include="kernel\opt_vecadd.cl" />
+    <Intel_OpenCL_Build_Rules Include="kernel\vecadd.cl" />
+    <Intel_OpenCL_Build_Rules Include="kernel\vecaddinv.cl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

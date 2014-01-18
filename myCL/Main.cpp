@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
 
 		//Prepare standard kernels
 		//Matrix - Vector Multiplication
-		std::ifstream matvecmul_src("matvecmul.cl");
+		std::ifstream matvecmul_src("kernel/matvecmul.cl");
 		std::string matvecmul_code(std::istreambuf_iterator<char>(matvecmul_src), (std::istreambuf_iterator<char>()));
 		cl::Program::Sources matvecmul_source(1, std::make_pair(matvecmul_code.c_str(), matvecmul_code.length() + 1));
 		cl::Program matvecmul_program = cl::Program(context, matvecmul_source);
@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
 		cl::Kernel matvecmul(matvecmul_program, "matvecmul");
 
 		//Add Vectors
-		std::ifstream vecadd_src("vecadd.cl");
+		std::ifstream vecadd_src("kernel/vecadd.cl");
 		std::string vecadd_code(std::istreambuf_iterator<char>(vecadd_src), (std::istreambuf_iterator<char>()));
 		cl::Program::Sources vecadd_source(1, std::make_pair(vecadd_code.c_str(), vecadd_code.length() + 1));
 		cl::Program vecadd_program = cl::Program(context, vecadd_source);
@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
 		cl::Kernel vecadd(vecadd_program, "vecadd");
 
 		//Invers Matrix
-		std::ifstream mattrans_src("mattrans.cl");
+		std::ifstream mattrans_src("kernel/mattrans.cl");
 		std::string mattrans_code(std::istreambuf_iterator<char>(mattrans_src), (std::istreambuf_iterator<char>()));
 		cl::Program::Sources mattrans_source(1, std::make_pair(mattrans_code.c_str(), mattrans_code.length() + 1));
 		cl::Program mattrans_program = cl::Program(context, mattrans_source);
@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
 		
 		//Prepare optimized kernels
 		//Matrix - Vector Multiplication
-		std::ifstream opt_matvecmul_src("opt_matvecmul.cl");
+		std::ifstream opt_matvecmul_src("kernel/opt_matvecmul.cl");
 		std::string opt_matvecmul_code(std::istreambuf_iterator<char>(opt_matvecmul_src), (std::istreambuf_iterator<char>()));
 		cl::Program::Sources opt_matvecmul_source(1, std::make_pair(opt_matvecmul_code.c_str(), opt_matvecmul_code.length() + 1));
 		cl::Program opt_matvecmul_program = cl::Program(context, opt_matvecmul_source);
@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
 		cl::Kernel opt_matvecmul(opt_matvecmul_program, "opt_matvecmul");
 
 		//Add Vectors
-		std::ifstream opt_vecadd_src("opt_vecadd.cl");
+		std::ifstream opt_vecadd_src("kernel/opt_vecadd.cl");
 		std::string opt_vecadd_code(std::istreambuf_iterator<char>(opt_vecadd_src), (std::istreambuf_iterator<char>()));
 		cl::Program::Sources opt_vecadd_source(1, std::make_pair(opt_vecadd_code.c_str(), opt_vecadd_code.length() + 1));
 		cl::Program opt_vecadd_program = cl::Program(context, opt_vecadd_source);
@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
 		cl::Kernel opt_vecadd(opt_vecadd_program, "opt_vecadd");
 
 		//Invers Matrix
-		std::ifstream opt_mattrans_src("opt_mattrans.cl");
+		std::ifstream opt_mattrans_src("kernel/opt_mattrans.cl");
 		std::string opt_mattrans_code(std::istreambuf_iterator<char>(opt_mattrans_src), (std::istreambuf_iterator<char>()));
 		cl::Program::Sources opt_mattrans_source(1, std::make_pair(opt_mattrans_code.c_str(), opt_mattrans_code.length() + 1));
 		cl::Program opt_mattrans_program = cl::Program(context, opt_mattrans_source);
