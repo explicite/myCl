@@ -165,9 +165,10 @@
     <ClCompile Include="test.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Intel_OpenCL_Build_Rules Include="matinv.cl" />
+    <Intel_OpenCL_Build_Rules Include="mattrans.cl" />
     <Intel_OpenCL_Build_Rules Include="matvecmul.cl" />
-    <Intel_OpenCL_Build_Rules Include="opt_matinv.cl" />
+    <Intel_OpenCL_Build_Rules Include="opt_matvecmul.cl" />
+    <Intel_OpenCL_Build_Rules Include="opt_mattrans.cl" />
     <Intel_OpenCL_Build_Rules Include="opt_vecadd.cl" />
     <Intel_OpenCL_Build_Rules Include="vecadd.cl" />
     <Intel_OpenCL_Build_Rules Include="vecaddinv.cl" />

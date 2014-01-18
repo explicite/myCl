@@ -6,4 +6,3 @@ __kernel void matvecmul(
 { 
 	P[get_global_id(0)] = M[get_global_id(0) + get_global_size(1) * get_global_id(1)] * V[get_global_id(1)];
 }
-

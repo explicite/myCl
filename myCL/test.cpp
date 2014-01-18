@@ -1,6 +1,7 @@
 #include "test.hpp"
 #include <stdlib.h> 
 #include <malloc.h>
+
 float* omv(const float* _M, const float* _V, const unsigned int _N)
 {
 	float* _prd = (float*)malloc(sizeof(float)*_N);

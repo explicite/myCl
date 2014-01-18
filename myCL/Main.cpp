@@ -42,6 +42,8 @@ int main(int argc, char* argv[])
 		size_t MAX_WORK_GROUP_SIZE = device.getInfo < CL_DEVICE_MAX_WORK_GROUP_SIZE > ();
 		std::cout << "Work group size: " << MAX_WORK_GROUP_SIZE << std::endl;
 
+		std::cout << "Preferreed group size: " << CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE << std::endl;
+
 		std::vector <size_t> MAX_WORK_ITEMS = device.getInfo < CL_DEVICE_MAX_WORK_ITEM_SIZES > ();
 		std::cout << "Working items: ";
 		for(int i = 0; i < MAX_WORK_ITEMS_DIMENSION; i++)
@@ -79,15 +81,21 @@ int main(int argc, char* argv[])
 		cl::Kernel vecadd(vecadd_program, "vecadd");
 
 		//Invers Matrix
-		std::ifstream matinv_src("matinv.cl");
-		std::string matinv_code(std::istreambuf_iterator<char>(matinv_src), (std::istreambuf_iterator<char>()));
-		cl::Program::Sources matinv_source(1, std::make_pair(matinv_code.c_str(), matinv_code.length() + 1));
-		cl::Program matinv_program = cl::Program(context, matinv_source);
-		matinv_program.build(devices);
-		cl::Kernel matinv(matinv_program, "matinv");
+		std::ifstream mattrans_src("mattrans.cl");
+		std::string mattrans_code(std::istreambuf_iterator<char>(mattrans_src), (std::istreambuf_iterator<char>()));
+		cl::Program::Sources mattrans_source(1, std::make_pair(mattrans_code.c_str(), mattrans_code.length() + 1));
+		cl::Program mattrans_program = cl::Program(context, mattrans_source);
+		mattrans_program.build(devices);
+		cl::Kernel matinv(mattrans_program, "mattrans");
 		
 		//Prepare optimized kernels
 		//Matrix - Vector Multiplication
+		std::ifstream opt_matvecmul_src("opt_matvecmul.cl");
+		std::string opt_matvecmul_code(std::istreambuf_iterator<char>(opt_matvecmul_src), (std::istreambuf_iterator<char>()));
+		cl::Program::Sources opt_matvecmul_source(1, std::make_pair(opt_matvecmul_code.c_str(), opt_matvecmul_code.length() + 1));
+		cl::Program opt_matvecmul_program = cl::Program(context, opt_matvecmul_source);
+		opt_matvecmul_program.build(devices);
+		cl::Kernel opt_matvecmul(opt_matvecmul_program, "opt_matvecmul");
 
 		//Add Vectors
 		std::ifstream opt_vecadd_src("opt_vecadd.cl");
@@ -98,12 +106,12 @@ int main(int argc, char* argv[])
 		cl::Kernel opt_vecadd(opt_vecadd_program, "opt_vecadd");
 
 		//Invers Matrix
-		std::ifstream opt_matinv_src("opt_matinv.cl");
-		std::string opt_matinv_code(std::istreambuf_iterator<char>(opt_matinv_src), (std::istreambuf_iterator<char>()));
-		cl::Program::Sources opt_matinv_source(1, std::make_pair(opt_matinv_code.c_str(), opt_matinv_code.length() + 1));
-		cl::Program opt_matinv_program = cl::Program(context, opt_matinv_source);
-		opt_matinv_program.build(devices);
-		cl::Kernel opt_matinv(opt_matinv_program, "opt_matinv");
+		std::ifstream opt_mattrans_src("opt_mattrans.cl");
+		std::string opt_mattrans_code(std::istreambuf_iterator<char>(opt_mattrans_src), (std::istreambuf_iterator<char>()));
+		cl::Program::Sources opt_mattrans_source(1, std::make_pair(opt_mattrans_code.c_str(), opt_mattrans_code.length() + 1));
+		cl::Program opt_mattrans_program = cl::Program(context, opt_mattrans_source);
+		opt_mattrans_program.build(devices);
+		cl::Kernel opt_mattrans(opt_mattrans_program, "opt_mattrans");
 
 		//Profiler
 		cl::Event profiler;
@@ -112,7 +120,7 @@ int main(int argc, char* argv[])
 		float* V = (float*)malloc(V_size);
 		float* V1 = (float*)malloc(V_size);
 		float* M = (float*)malloc(M_size);
-		float* invM = (float*)malloc(M_size);
+		float* transM = (float*)malloc(M_size);
 		float* V2 = (float*)malloc(V_size);
 		float* P = (float*)malloc(V_size);
 
@@ -128,8 +136,9 @@ int main(int argc, char* argv[])
 		#pragma omp parallel for schedule(static) private(i)
 		for(i = 0; i < SIZE * SIZE; i++){
 			M[i] = i;
-			invM[i] = 0;
+			transM[i] = 0;
 		}	
+
 
 		//Matrix vector multiplication
 		cl::Buffer readM = cl::Buffer(context, CL_MEM_READ_ONLY, M_size);
@@ -139,12 +148,15 @@ int main(int argc, char* argv[])
 		queue.enqueueWriteBuffer(readM, CL_TRUE, 0, M_size, M);
 		queue.enqueueWriteBuffer(readV, CL_TRUE, 0, V_size, V);
 		
+		size_t LOCAL = MAX_WORK_GROUP_SIZE;
+		opt_matvecmul.setArg(0, readM);
+		opt_matvecmul.setArg(1, SIZE);
+		opt_matvecmul.setArg(2, SIZE);
+		opt_matvecmul.setArg(3, readV);
+		opt_matvecmul.setArg(4, writeV1);
+		opt_matvecmul.setArg(5, cl::Local(LOCAL*sizeof(float)));
 
-		matvecmul.setArg(0, readM);
-		matvecmul.setArg(1, readV);
-		matvecmul.setArg(2, writeV1);
-	
-		queue.enqueueNDRangeKernel(matvecmul, cl::NullRange, cl::NDRange(SIZE, SIZE), cl::NDRange(16, 16), NULL, &profiler);
+		queue.enqueueNDRangeKernel(opt_matvecmul, cl::NullRange, cl::NDRange(SIZE/COMPUTE_UNITS * LOCAL), cl::NDRange(LOCAL), NULL, &profiler);
 		queue.enqueueReadBuffer(writeV1, CL_TRUE, 0, V_size, V1);
 		queue.flush();
 		profiler.wait();
@@ -164,9 +176,9 @@ int main(int argc, char* argv[])
 		bool result = assert(omv(M, V, SIZE), V1, SIZE); 
 
 		if(result)
-			std::cout << "\nSuccess!" << std::endl;
+			std::cout << "\nMatrix-Vector: Success!" << std::endl;
 		else
-			std::cout << "\nFailed!" << std::endl;
+			std::cout << "\nMatrix-Vector: Failed!" << std::endl;
 		
 		//Profiling info
 		std::cout << "Size: " << SIZE << std::endl;
@@ -174,55 +186,63 @@ int main(int argc, char* argv[])
 		std::cout << "Queued: " << matvecmul_submit - matvecmul_queued << "ns\n";
 		std::cout << "Submit: " << matvecmul_start - matvecmul_submit << "ns\n";
 		std::cout << "Computation: " << matvecmul_end - matvecmul_start << "ns\n";
+		std::cout << "Performance: " << (2.0*(double)SIZE*(double)SIZE/((double)matvecmul_end-(double)matvecmul_start))  << " GFlops\n";
+		std::cout << "Transfet speed: " << (sizeof(float)*2.0*(double)SIZE*(double)SIZE/((double)matvecmul_end-(double)matvecmul_start))  << " GB/s\n";
+
 
 		//Matrix invers
 		cl::Buffer writeM = cl::Buffer(context, CL_MEM_WRITE_ONLY, M_size);
 
 		queue.enqueueWriteBuffer(readM, CL_TRUE, 0, M_size, M);
 
-		opt_matinv.setArg(0, readM);
-		opt_matinv.setArg(1, writeM);
+		opt_mattrans.setArg(0, readM);
+		opt_mattrans.setArg(1, writeM);
 
-		queue.enqueueNDRangeKernel(opt_matinv, cl::NullRange, cl::NDRange(SIZE, SIZE), cl::NDRange(16, 16), NULL, &profiler);
-		queue.enqueueReadBuffer(writeM, CL_TRUE, 0, M_size, invM);
+		queue.enqueueNDRangeKernel(opt_mattrans, cl::NullRange, cl::NDRange(SIZE, SIZE), cl::NDRange(16, 16), NULL, &profiler);
+		queue.enqueueReadBuffer(writeM, CL_TRUE, 0, M_size, transM);
 		queue.flush();
 		profiler.wait();
 
-		cl_ulong matinv_queued;
-		cl_ulong matinv_submit;
-		cl_ulong matinv_start;
-		cl_ulong matinv_end;
+		cl_ulong mattrans_queued;
+		cl_ulong mattrans_submit;
+		cl_ulong mattrans_start;
+		cl_ulong mattrans_end;
 
-		profiler.getProfilingInfo <cl_ulong> (CL_PROFILING_COMMAND_QUEUED, &matinv_queued);
-		profiler.getProfilingInfo <cl_ulong> (CL_PROFILING_COMMAND_SUBMIT, &matinv_submit);
-		profiler.getProfilingInfo <cl_ulong> (CL_PROFILING_COMMAND_START, &matinv_start);
-		profiler.getProfilingInfo <cl_ulong> (CL_PROFILING_COMMAND_END, &matinv_end);
+		profiler.getProfilingInfo <cl_ulong> (CL_PROFILING_COMMAND_QUEUED, &mattrans_queued);
+		profiler.getProfilingInfo <cl_ulong> (CL_PROFILING_COMMAND_SUBMIT, &mattrans_submit);
+		profiler.getProfilingInfo <cl_ulong> (CL_PROFILING_COMMAND_START, &mattrans_start);
+		profiler.getProfilingInfo <cl_ulong> (CL_PROFILING_COMMAND_END, &mattrans_end);
 
-		result = assert_inv(M, invM, SIZE); 
+		result = assert_inv(M, transM, SIZE); 
 
 		if(result)
-			std::cout << "\nSuccess!" << std::endl;
+			std::cout << "\nMatrix trans: Success!" << std::endl;
 		else
-			std::cout << "\nFailed!" << std::endl;
+			std::cout << "\nMatrix trans: Failed!" << std::endl;
 		
 		//Profiling info
 		std::cout << "Size: " << SIZE << std::endl;
 		std::cout << "Memory: " << 2 * M_size  << std::endl;
-		std::cout << "Queued: " << matinv_submit - matinv_queued << "ns\n";
-		std::cout << "Submit: " << matinv_start - matinv_submit << "ns\n";
-		std::cout << "Computation: " << matinv_end - matinv_start << "ns\n";
+		std::cout << "Queued: " << mattrans_submit - mattrans_queued << "ns\n";
+		std::cout << "Submit: " << mattrans_start - mattrans_submit << "ns\n";
+		std::cout << "Computation: " << mattrans_end - mattrans_start << "ns\n";
+		std::cout << "Transfet speed: " << (2.0*(double)SIZE*sizeof(float)/((double)mattrans_end-(double)mattrans_start))  << " GB/s\n";
+
 
 		//Matrix vector multiplication
 		cl::Buffer writeV2 = cl::Buffer(context, CL_MEM_WRITE_ONLY, V_size);
 
-		queue.enqueueWriteBuffer(readM, CL_TRUE, 0, M_size, invM);
+		queue.enqueueWriteBuffer(readM, CL_TRUE, 0, M_size, transM);
 		queue.enqueueWriteBuffer(readV, CL_TRUE, 0, V_size, V);
 
-		matvecmul.setArg(0, readM);
-		matvecmul.setArg(1, readV);
-		matvecmul.setArg(2, writeV2);
+		opt_matvecmul.setArg(0, readM);
+		opt_matvecmul.setArg(1, SIZE);
+		opt_matvecmul.setArg(2, SIZE);
+		opt_matvecmul.setArg(3, readV);
+		opt_matvecmul.setArg(4, writeV2);
+		opt_matvecmul.setArg(5, cl::Local(LOCAL*sizeof(float)));
 
-		queue.enqueueNDRangeKernel(matvecmul, cl::NullRange, cl::NDRange(SIZE, SIZE), cl::NDRange(16, 16), NULL, &profiler);
+		queue.enqueueNDRangeKernel(opt_matvecmul, cl::NullRange, cl::NDRange(SIZE/COMPUTE_UNITS * LOCAL), cl::NDRange(LOCAL), NULL, &profiler);
 		queue.enqueueReadBuffer(writeV2, CL_TRUE, 0, V_size, V2);
 		queue.flush();
 		profiler.wait();
@@ -233,12 +253,12 @@ int main(int argc, char* argv[])
 		profiler.getProfilingInfo <cl_ulong> (CL_PROFILING_COMMAND_END, &matvecmul_end);
 
 		//Veryfication
-		result = assert(omv(invM, V, SIZE), V2, SIZE); 
+		result = assert(omv(transM, V, SIZE), V2, SIZE); 
 
 		if(result)
-			std::cout << "\nSuccess!" << std::endl;
+			std::cout << "\nMatrix-Vector: Success!" << std::endl;
 		else
-			std::cout << "\nFailed!" << std::endl;
+			std::cout << "\nMatrix-Vector: Failed!" << std::endl;
 		
 		//Profiling info
 		std::cout << "Size: " << SIZE << std::endl;
@@ -246,7 +266,9 @@ int main(int argc, char* argv[])
 		std::cout << "Queued: " << matvecmul_submit - matvecmul_queued << "ns\n";
 		std::cout << "Submit: " << matvecmul_start - matvecmul_submit << "ns\n";
 		std::cout << "Computation: " << matvecmul_end - matvecmul_start << "ns\n";
-		
+		std::cout << "Performance: " << (2.0*(double)SIZE*(double)SIZE/((double)matvecmul_end-(double)matvecmul_start))  << " GFlops\n";
+		std::cout << "Transfet speed: " << (sizeof(float)*2.0*(double)SIZE*(double)SIZE/((double)matvecmul_end-(double)matvecmul_start))  << " GB/s\n";
+
 
 		//Sum vectors
 		cl::Buffer readV1 = cl::Buffer(context, CL_MEM_READ_ONLY, V_size);
@@ -260,7 +282,7 @@ int main(int argc, char* argv[])
 		opt_vecadd.setArg(2, writeP);
 		opt_vecadd.setArg(3, SIZE);
 
-		queue.enqueueNDRangeKernel(opt_vecadd, cl::NullRange, cl::NDRange(SIZE/4), cl::NDRange(256), NULL, &profiler);
+		queue.enqueueNDRangeKernel(opt_vecadd, cl::NullRange, cl::NDRange(COMPUTE_UNITS * LOCAL), cl::NDRange(LOCAL), NULL, &profiler);
 		queue.enqueueReadBuffer(writeP, CL_TRUE, 0, V_size, P);
 		queue.flush();
 		profiler.wait();
@@ -279,9 +301,9 @@ int main(int argc, char* argv[])
 		result = assert(P, add(V1, V2, SIZE), SIZE); 
 
 		if(result)
-			std::cout << "\nSuccess!" << std::endl;
+			std::cout << "\nAdd Vectors: Success!" << std::endl;
 		else
-			std::cout << "\nFailed!" << std::endl;
+			std::cout << "\nAdd Vectors: Failed!" << std::endl;
 		
 		//Profiling info
 		std::cout << "Size: " << SIZE << std::endl;
@@ -289,6 +311,9 @@ int main(int argc, char* argv[])
 		std::cout << "Queued: " << vecadd_submit - vecadd_queued << "ns\n";
 		std::cout << "Submit: " << vecadd_start - vecadd_submit << "ns\n";
 		std::cout << "Computation: " << vecadd_end - vecadd_start << "ns\n";
+		std::cout << "Performance: " << ((double)SIZE/((double)vecadd_end-(double)vecadd_start))  << " GFlops\n";
+		std::cout << "Transfet speed: " << (sizeof(float)*(double)SIZE/((double)vecadd_end-(double)vecadd_start))  << " GB/s\n";
+
 
 		//Clean up
 		free(V);
@@ -296,7 +321,7 @@ int main(int argc, char* argv[])
 		free(V2);
 		free(P);
 		free(M);
-		free(invM); 
+		free(transM); 
 
 	} catch(cl::Error error) {
 		std::cout << error.what() << "(" << error.err() << ")" << std::endl;
