@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
 		cl::CommandQueue queue = cl::CommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE);
 		
 		//Size for vector and matrix
-		const unsigned int SIZE = 1024*7;
+		const unsigned int SIZE = 1024*5;
 		size_t V_size = sizeof(float) * SIZE;
 		size_t M_size = sizeof(float) * SIZE * SIZE;
 
@@ -148,15 +148,14 @@ int main(int argc, char* argv[])
 		queue.enqueueWriteBuffer(readM, CL_TRUE, 0, M_size, M);
 		queue.enqueueWriteBuffer(readV, CL_TRUE, 0, V_size, V);
 		
-		size_t LOCAL = MAX_WORK_GROUP_SIZE;
 		opt_matvecmul.setArg(0, readM);
 		opt_matvecmul.setArg(1, SIZE);
 		opt_matvecmul.setArg(2, SIZE);
 		opt_matvecmul.setArg(3, readV);
 		opt_matvecmul.setArg(4, writeV1);
-		opt_matvecmul.setArg(5, cl::Local(LOCAL*sizeof(float)));
+		opt_matvecmul.setArg(5, cl::Local(MAX_WORK_GROUP_SIZE*sizeof(float)));
 
-		queue.enqueueNDRangeKernel(opt_matvecmul, cl::NullRange, cl::NDRange(SIZE/COMPUTE_UNITS * LOCAL), cl::NDRange(LOCAL), NULL, &profiler);
+		queue.enqueueNDRangeKernel(opt_matvecmul, cl::NullRange, cl::NDRange((SIZE/COMPUTE_UNITS)*MAX_WORK_GROUP_SIZE), cl::NDRange(MAX_WORK_GROUP_SIZE), NULL, &profiler);
 		queue.enqueueReadBuffer(writeV1, CL_TRUE, 0, V_size, V1);
 		queue.flush();
 		profiler.wait();
@@ -240,9 +239,9 @@ int main(int argc, char* argv[])
 		opt_matvecmul.setArg(2, SIZE);
 		opt_matvecmul.setArg(3, readV);
 		opt_matvecmul.setArg(4, writeV2);
-		opt_matvecmul.setArg(5, cl::Local(LOCAL*sizeof(float)));
+		opt_matvecmul.setArg(5, cl::Local(MAX_WORK_GROUP_SIZE*sizeof(float)));
 
-		queue.enqueueNDRangeKernel(opt_matvecmul, cl::NullRange, cl::NDRange(SIZE/COMPUTE_UNITS * LOCAL), cl::NDRange(LOCAL), NULL, &profiler);
+		queue.enqueueNDRangeKernel(opt_matvecmul, cl::NullRange, cl::NDRange((SIZE/COMPUTE_UNITS) * MAX_WORK_GROUP_SIZE), cl::NDRange(MAX_WORK_GROUP_SIZE), NULL, &profiler);
 		queue.enqueueReadBuffer(writeV2, CL_TRUE, 0, V_size, V2);
 		queue.flush();
 		profiler.wait();
@@ -282,7 +281,7 @@ int main(int argc, char* argv[])
 		opt_vecadd.setArg(2, writeP);
 		opt_vecadd.setArg(3, SIZE);
 
-		queue.enqueueNDRangeKernel(opt_vecadd, cl::NullRange, cl::NDRange(COMPUTE_UNITS * LOCAL), cl::NDRange(LOCAL), NULL, &profiler);
+		queue.enqueueNDRangeKernel(opt_vecadd, cl::NullRange, cl::NDRange(COMPUTE_UNITS * MAX_WORK_GROUP_SIZE), cl::NDRange(MAX_WORK_GROUP_SIZE), NULL, &profiler);
 		queue.enqueueReadBuffer(writeP, CL_TRUE, 0, V_size, P);
 		queue.flush();
 		profiler.wait();
