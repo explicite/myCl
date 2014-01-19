@@ -186,7 +186,7 @@ int main(int argc, char* argv[])
 		std::cout << "Submit: " << matvecmul_start - matvecmul_submit << "ns\n";
 		std::cout << "Computation: " << matvecmul_end - matvecmul_start << "ns\n";
 		std::cout << "Performance: " << (2.0*(double)SIZE*(double)SIZE/((double)matvecmul_end-(double)matvecmul_start))  << " GFlops\n";
-		std::cout << "Transfet speed: " << (sizeof(float)*2.0*(double)SIZE*(double)SIZE/((double)matvecmul_end-(double)matvecmul_start))  << " GB/s\n";
+		std::cout << "Transfer speed: " << (sizeof(float)*2.0*(double)SIZE*(double)SIZE/((double)matvecmul_end-(double)matvecmul_start))  << " GB/s\n";
 
 
 		//Matrix invers
@@ -225,7 +225,7 @@ int main(int argc, char* argv[])
 		std::cout << "Queued: " << mattrans_submit - mattrans_queued << "ns\n";
 		std::cout << "Submit: " << mattrans_start - mattrans_submit << "ns\n";
 		std::cout << "Computation: " << mattrans_end - mattrans_start << "ns\n";
-		std::cout << "Transfet speed: " << (2.0*(double)SIZE*sizeof(float)/((double)mattrans_end-(double)mattrans_start))  << " GB/s\n";
+		std::cout << "Transfer speed: " << (2.0*(double)SIZE*sizeof(float)/((double)mattrans_end-(double)mattrans_start))  << " GB/s\n";
 
 
 		//Matrix vector multiplication
@@ -266,7 +266,7 @@ int main(int argc, char* argv[])
 		std::cout << "Submit: " << matvecmul_start - matvecmul_submit << "ns\n";
 		std::cout << "Computation: " << matvecmul_end - matvecmul_start << "ns\n";
 		std::cout << "Performance: " << (2.0*(double)SIZE*(double)SIZE/((double)matvecmul_end-(double)matvecmul_start))  << " GFlops\n";
-		std::cout << "Transfet speed: " << (sizeof(float)*2.0*(double)SIZE*(double)SIZE/((double)matvecmul_end-(double)matvecmul_start))  << " GB/s\n";
+		std::cout << "Transfer speed: " << (sizeof(float)*2.0*(double)SIZE*(double)SIZE/((double)matvecmul_end-(double)matvecmul_start))  << " GB/s\n";
 
 
 		//Sum vectors
@@ -311,7 +311,7 @@ int main(int argc, char* argv[])
 		std::cout << "Submit: " << vecadd_start - vecadd_submit << "ns\n";
 		std::cout << "Computation: " << vecadd_end - vecadd_start << "ns\n";
 		std::cout << "Performance: " << ((double)SIZE/((double)vecadd_end-(double)vecadd_start))  << " GFlops\n";
-		std::cout << "Transfet speed: " << (sizeof(float)*(double)SIZE/((double)vecadd_end-(double)vecadd_start))  << " GB/s\n";
+		std::cout << "Transfer speed: " << (sizeof(float)*(double)SIZE/((double)vecadd_end-(double)vecadd_start))  << " GB/s\n";
 
 
 		//Clean up
