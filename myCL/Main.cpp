@@ -6,6 +6,13 @@
 
 #include "test.hpp"
 
+#define AMD_RADEON_HD_5670
+
+#ifdef AMD_RADEON_HD_5670
+#define NR_COMP_UNITS 5
+#define NR_CORES_PER_CU 20
+#endif
+
 int main(int argc, char* argv[])
 {
 	try {
@@ -113,6 +120,14 @@ int main(int argc, char* argv[])
 		opt_mattrans_program.build(devices);
 		cl::Kernel opt_mattrans(opt_mattrans_program, "opt_mattrans");
 
+		//Matrix multiplication
+		std::ifstream opt_mat_mul_src("kernel/opt_mat_mul.cl");
+		std::string opt_mat_mul_code(std::istreambuf_iterator<char>(opt_mat_mul_src), (std::istreambuf_iterator<char>()));
+		cl::Program::Sources opt_mat_mul_source(1, std::make_pair(opt_mat_mul_code.c_str(), opt_mat_mul_code.length() + 1));
+		cl::Program opt_mat_mul_program = cl::Program(context, opt_mat_mul_source);
+		opt_mat_mul_program.build(devices);
+		cl::Kernel opt_mat_mul(opt_mat_mul_program, "opt_mat_mul");
+
 		//Profiler
 		cl::Event profiler;
 
@@ -155,7 +170,7 @@ int main(int argc, char* argv[])
 		opt_matvecmul.setArg(4, writeV1);
 		opt_matvecmul.setArg(5, cl::Local(MAX_WORK_GROUP_SIZE*sizeof(float)));
 
-		queue.enqueueNDRangeKernel(opt_matvecmul, cl::NullRange, cl::NDRange((SIZE/COMPUTE_UNITS)*MAX_WORK_GROUP_SIZE), cl::NDRange(MAX_WORK_GROUP_SIZE), NULL, &profiler);
+		queue.enqueueNDRangeKernel(opt_matvecmul, cl::NullRange, cl::NDRange((SIZE/MAX_WORK_GROUP_SIZE)*MAX_WORK_GROUP_SIZE), cl::NDRange(MAX_WORK_GROUP_SIZE), NULL, &profiler);
 		queue.enqueueReadBuffer(writeV1, CL_TRUE, 0, V_size, V1);
 		queue.flush();
 		profiler.wait();
@@ -172,7 +187,7 @@ int main(int argc, char* argv[])
 		profiler.getProfilingInfo <cl_ulong> (CL_PROFILING_COMMAND_END, &matvecmul_end);
 
 		//Veryfication
-		bool result = assert(omv(M, V, SIZE), V1, SIZE); 
+		bool result = assert(mat_vec(M, V, SIZE), V1, SIZE); 
 
 		if(result)
 			std::cout << "\nMatrix-Vector: Success!" << std::endl;
@@ -252,7 +267,7 @@ int main(int argc, char* argv[])
 		profiler.getProfilingInfo <cl_ulong> (CL_PROFILING_COMMAND_END, &matvecmul_end);
 
 		//Veryfication
-		result = assert(omv(transM, V, SIZE), V2, SIZE); 
+		result = assert(mat_vec(transM, V, SIZE), V2, SIZE); 
 
 		if(result)
 			std::cout << "\nMatrix-Vector: Success!" << std::endl;

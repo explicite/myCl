@@ -21,7 +21,7 @@ __kernel void opt_matvecmul (
       barrier(CLK_LOCAL_MEM_FENCE); 
 
       if (get_local_id(0) < stride) { 
-		pdt[get_local_id(0)] += pdt[get_local_id(0) + stride]; 
+                pdt[get_local_id(0)] += pdt[get_local_id(0) + stride]; 
       } 
 
     } 

@@ -2,7 +2,7 @@
 #include <stdlib.h> 
 #include <malloc.h>
 
-float* omv(const float* _M, const float* _V, const unsigned int _N)
+float* mat_vec(const float* _M, const float* _V, const unsigned int _N)
 {
 	float* _prd = (float*)malloc(sizeof(float)*_N);
 
@@ -16,6 +16,32 @@ float* omv(const float* _M, const float* _V, const unsigned int _N)
 			_prd[i] += _M[i+ j *_N] * _V[j];
 		}
 	}
+
+	return _prd;
+}
+
+float* mat_mul(const float* _A, const float* _B, const unsigned int _N)
+{
+	float* _prd = (float*)malloc(sizeof(float)*_N*_N);
+
+	register int i, j, k, ii, jj; 
+	register unsigned int BLSR, BLSC;
+
+	BLSR = 4;
+	BLSC = 2;
+
+	if (_N < 100)
+		BLSR = 1;
+	BLSC = 1;
+
+#pragma omp parallel for schedule(static) private(i, j, k, ii, jj)
+	for (i = 0; i < _N; i += BLSR)
+		for (j = 0; j < _N; j += BLSC)
+			for (k = 0; k < _N; k++)
+				for (ii = i; ii < i + BLSR; ii++)
+					for (jj = j; jj < j + BLSC; jj++)
+						_prd[ii + jj*_N] += _A[ii + k*_N] * _B[k + jj*_N];
+
 
 	return _prd;
 }
