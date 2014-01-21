@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
 		cl::CommandQueue queue = cl::CommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE);
 		
 		//Size for vector and matrix
-		const unsigned int SIZE = 1024*5;
+		const unsigned int SIZE = MAX_WORK_GROUP_SIZE * COMPUTE_UNITS;
 		size_t V_size = sizeof(float) * SIZE;
 		size_t M_size = sizeof(float) * SIZE * SIZE;
 
@@ -136,6 +136,7 @@ int main(int argc, char* argv[])
 		float* V1 = (float*)malloc(V_size);
 		float* M = (float*)malloc(M_size);
 		float* transM = (float*)malloc(M_size);
+		float* mulM = (float*)malloc(M_size);
 		float* V2 = (float*)malloc(V_size);
 		float* P = (float*)malloc(V_size);
 
@@ -152,6 +153,7 @@ int main(int argc, char* argv[])
 		for(i = 0; i < SIZE * SIZE; i++){
 			M[i] = i;
 			transM[i] = 0;
+			mulM[i] = 0;
 		}	
 
 
@@ -328,6 +330,50 @@ int main(int argc, char* argv[])
 		std::cout << "Performance: " << ((double)SIZE/((double)vecadd_end-(double)vecadd_start))  << " GFlops\n";
 		std::cout << "Transfer speed: " << (sizeof(float)*(double)SIZE/((double)vecadd_end-(double)vecadd_start))  << " GB/s\n";
 
+		//Matrix multiplication
+		cl::Buffer read_invM = cl::Buffer(context, CL_MEM_READ_ONLY, M_size);
+		cl::Buffer write_mulM = cl::Buffer(context, CL_MEM_WRITE_ONLY, M_size);
+
+		queue.enqueueWriteBuffer(readM, CL_TRUE, 0, M_size, M);
+		queue.enqueueWriteBuffer(read_invM, CL_TRUE, 0, M_size, transM);
+
+		opt_mat_mul.setArg(0, readM);
+		opt_mat_mul.setArg(1, read_invM);
+		opt_mat_mul.setArg(2, write_mulM);
+		opt_mat_mul.setArg(3, SIZE);
+
+		queue.enqueueNDRangeKernel(opt_mat_mul, cl::NullRange, cl::NDRange(SIZE, SIZE), cl::NDRange(16, 16), NULL, &profiler);
+		queue.enqueueReadBuffer(write_mulM, CL_TRUE, 0, M_size, mulM);
+		queue.flush();
+		profiler.wait();
+
+		cl_ulong opt_mat_mul_queued;
+		cl_ulong opt_mat_mul_submit;
+		cl_ulong opt_mat_mul_start;
+		cl_ulong opt_mat_mul_end;
+
+		profiler.getProfilingInfo <cl_ulong> (CL_PROFILING_COMMAND_QUEUED, &opt_mat_mul_queued);
+		profiler.getProfilingInfo <cl_ulong> (CL_PROFILING_COMMAND_SUBMIT, &opt_mat_mul_submit);
+		profiler.getProfilingInfo <cl_ulong> (CL_PROFILING_COMMAND_START, &opt_mat_mul_start);
+		profiler.getProfilingInfo <cl_ulong> (CL_PROFILING_COMMAND_END, &opt_mat_mul_end);
+
+		//Veryfication
+		result = assert(mat_mul(transM, M, SIZE), mulM, SIZE*SIZE); 
+
+		if(result)
+			std::cout << "\nMatrix multiplication: Success!" << std::endl;
+		else
+			std::cout << "\nMatrix multiplication: Failed!" << std::endl;
+		
+		//Profiling info
+		std::cout << "Size: " << SIZE << std::endl;
+		std::cout << "Memory: " << (2 * V_size) + M_size  << std::endl;
+		std::cout << "Queued: " << opt_mat_mul_submit - opt_mat_mul_queued << "ns\n";
+		std::cout << "Submit: " << opt_mat_mul_start - opt_mat_mul_submit << "ns\n";
+		std::cout << "Computation: " << opt_mat_mul_end - opt_mat_mul_start << "ns\n";
+		std::cout << "Performance: " << ((double)SIZE*(double)SIZE*(double)SIZE/((double)opt_mat_mul_end-(double)opt_mat_mul_start))  << " GFlops\n";
+		std::cout << "Transfer speed: " << (sizeof(float)*(double)SIZE*(double)SIZE*(double)SIZE/((double)opt_mat_mul_end-(double)opt_mat_mul_start))  << " GB/s\n";
+
 
 		//Clean up
 		free(V);
@@ -336,6 +382,7 @@ int main(int argc, char* argv[])
 		free(P);
 		free(M);
 		free(transM); 
+		free(mulM);
 
 	} catch(cl::Error error) {
 		std::cout << error.what() << "(" << error.err() << ")" << std::endl;
