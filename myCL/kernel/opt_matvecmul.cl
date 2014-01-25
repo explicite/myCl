@@ -1,7 +1,7 @@
 __kernel void opt_matvecmul (
   const __global float* M, 
-  uint WIDTH, 
-  uint HEIGHT, 
+  const uint WIDTH, 
+  const uint HEIGHT, 
   const __global float* V, 
   __global float* P, 
   __local float* pdt
