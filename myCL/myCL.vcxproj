@@ -170,6 +170,7 @@
   <ItemGroup>
     <Intel_OpenCL_Build_Rules Include="kernel\mattrans.cl" />
     <Intel_OpenCL_Build_Rules Include="kernel\matvecmul.cl" />
+    <Intel_OpenCL_Build_Rules Include="kernel\mat_mul.cl" />
     <Intel_OpenCL_Build_Rules Include="kernel\opt_mattrans.cl" />
     <Intel_OpenCL_Build_Rules Include="kernel\opt_matvecmul.cl" />
     <Intel_OpenCL_Build_Rules Include="kernel\opt_mat_mul.cl" />

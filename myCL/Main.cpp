@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
 			exit(1);
 		}
 		cl::Device device = devices[0];
-
+		
 		std::cout << "Using device: " << device.getInfo < CL_DEVICE_NAME > ()  << std::endl;
 
 		std::cout << "Device mem: " << device.getInfo < CL_DEVICE_MAX_MEM_ALLOC_SIZE > () << std::endl;
@@ -155,8 +155,8 @@ int main(int argc, char* argv[])
 			transM[i] = 0;
 			mulM[i] = 0;
 		}	
-
-
+		
+		
 		//Matrix vector multiplication
 		cl::Buffer readM = cl::Buffer(context, CL_MEM_READ_ONLY, M_size);
 		cl::Buffer readV = cl::Buffer(context, CL_MEM_READ_ONLY, V_size);
@@ -330,6 +330,7 @@ int main(int argc, char* argv[])
 		std::cout << "Performance: " << ((double)SIZE/((double)vecadd_end-(double)vecadd_start))  << " GFlops\n";
 		std::cout << "Transfer speed: " << (sizeof(float)*(double)SIZE/((double)vecadd_end-(double)vecadd_start))  << " GB/s\n";
 
+	
 		//Matrix multiplication
 		cl::Buffer read_invM = cl::Buffer(context, CL_MEM_READ_ONLY, M_size);
 		cl::Buffer write_mulM = cl::Buffer(context, CL_MEM_WRITE_ONLY, M_size);
@@ -366,6 +367,7 @@ int main(int argc, char* argv[])
 			std::cout << "\nMatrix multiplication: Failed!" << std::endl;
 		
 		double operations = SIZE*(SIZE*(SIZE*2));
+		double memory = (SIZE/16*2)+((SIZE/16)*33*6) +2;
 		double time = (double)opt_mat_mul_end - (double)opt_mat_mul_start;
 	
 		//Profiling info
@@ -375,7 +377,7 @@ int main(int argc, char* argv[])
 		std::cout << "Submit: " << opt_mat_mul_start - opt_mat_mul_submit << "ns\n";
 		std::cout << "Computation: " << opt_mat_mul_end - opt_mat_mul_start << "ns\n";
 		std::cout << "Performance: " << operations/time<< " GFlops\n";
-		std::cout << "Transfer speed: " << sizeof(float)*operations/time << " GB/s\n";
+		std::cout << "Transfer speed: " << sizeof(float)*memory/time << " GB/s\n";
 
 
 		//Clean up

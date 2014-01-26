@@ -31,10 +31,23 @@ __kernel void opt_mat_mul (
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    for(i=0; i< BLOCK_SIZE; i++){
-      temp += A_local[local_row*BLOCK_SIZE+i]*B_local[i*BLOCK_SIZE+local_col];
-    }
-    C_local[local_row * BLOCK_SIZE + local_col] += temp; 
+    C_local[local_row * BLOCK_SIZE + local_col] = 
+		A_local[local_row*BLOCK_SIZE+i]*B_local[i*BLOCK_SIZE+local_col] +
+		A_local[local_row*(BLOCK_SIZE+1)+i]*B_local[(i*BLOCK_SIZE+1)+local_col] +
+		A_local[local_row*(BLOCK_SIZE+2)+i]*B_local[(i*BLOCK_SIZE+2)+local_col] +
+		A_local[local_row*(BLOCK_SIZE+3)+i]*B_local[(i*BLOCK_SIZE+3)+local_col] +
+		A_local[local_row*(BLOCK_SIZE+4)+i]*B_local[i*(BLOCK_SIZE+4)+local_col] +
+		A_local[local_row*(BLOCK_SIZE+5)+i]*B_local[(i*BLOCK_SIZE+5)+local_col] +
+		A_local[local_row*(BLOCK_SIZE+6)+i]*B_local[(i*BLOCK_SIZE+6)+local_col] +
+		A_local[local_row*(BLOCK_SIZE+7)+i]*B_local[(i*BLOCK_SIZE+7)+local_col] +
+		A_local[local_row*(BLOCK_SIZE+8)+i]*B_local[i*(BLOCK_SIZE+8)+local_col] +
+		A_local[local_row*(BLOCK_SIZE+9)+i]*B_local[(i*BLOCK_SIZE+9)+local_col] +
+		A_local[local_row*(BLOCK_SIZE+10)+i]*B_local[(i*BLOCK_SIZE+10)+local_col] +
+		A_local[local_row*(BLOCK_SIZE+11)+i]*B_local[(i*BLOCK_SIZE+11)+local_col] +
+		A_local[local_row*(BLOCK_SIZE+12)+i]*B_local[i*(BLOCK_SIZE+12)+local_col] +
+		A_local[local_row*(BLOCK_SIZE+13)+i]*B_local[(i*BLOCK_SIZE+13)+local_col] +
+		A_local[local_row*(BLOCK_SIZE+14)+i]*B_local[(i*BLOCK_SIZE+14)+local_col] +
+		A_local[local_row*(BLOCK_SIZE+15)+i]*B_local[(i*BLOCK_SIZE+15)+local_col];
     
 	barrier(CLK_LOCAL_MEM_FENCE);
   }

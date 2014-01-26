@@ -56,5 +56,8 @@
     <Intel_OpenCL_Build_Rules Include="kernel\opt_mat_mul.cl">
       <Filter>OpenCL Files</Filter>
     </Intel_OpenCL_Build_Rules>
+    <Intel_OpenCL_Build_Rules Include="kernel\mat_mul.cl">
+      <Filter>OpenCL Files</Filter>
+    </Intel_OpenCL_Build_Rules>
   </ItemGroup>
 </Project>
